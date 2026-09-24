@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>梅花座隨機排座系統</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 150px;
+            height: 200px;
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: 0.3s;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .group-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            width: 220px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-top: 5px solid #3498db;
+        }
+        .group-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .seat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .seat {
+            background-color: #ecf0f1;
+            padding: 10px 5px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+        }
+        .seat.boy { background-color: #d6eaf8; color: #154360; }
+        .seat.girl { background-color: #fadbd8; color: #641e16; }
+        .seat.fifth {
+            grid-column: span 2;
+            background-color: #e8daef;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>教室隨機排座系統 (固定分6組)</h1>
+    <p>第一組優先 3 人，第二組優先 4 人，並排成梅花座。</p>
+
+    <div class="container">
+        <div>
+            <h3>男生名單</h3>
+            <textarea id="boysList">
+男1
+男2
+男3
+男4
+男5
+男6
+男7
+男8
+男9
+男10
+男11
+男12</textarea>
+        </div>
+        <div>
+            <h3>女生名單</h3>
+            <textarea id="girlsList">
+女1
+女2
+女3
+女4
+女5
+女6
+女7
+女8
+女9
+女10
+女11
+女12
+女13</textarea>
+        </div>
+    </div>
+
+    <button onclick="generateSeating()">開始隨機排座</button>
+
+    <div id="result"></div>
+
+    <script>
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function generateSeating() {
+            let boys = document.getElementById('boysList').value.split('\n').map(s => s.trim()).filter(s => s);
+            let girls = document.getElementById('girlsList').value.split('\n').map(s => s.trim()).filter(s => s);
+            
+            const total = boys.length + girls.length;
+            if (total === 0) {
+                alert(`目前沒有輸入任何名單喔！`);
+                return;
+            }
+
+            // 打亂名單
+            boys = shuffle(boys);
+            girls = shuffle(girls);
+
+            function getStudent(prefer) {
+                if (prefer === 'B' && boys.length > 0) return { name: boys.pop(), type: 'boy' };
+                if (prefer === 'G' && girls.length > 0) return { name: girls.pop(), type: 'girl' };
+                if (boys.length > 0) return { name: boys.pop(), type: 'boy' };
+                if (girls.length > 0) return { name: girls.pop(), type: 'girl' };
+                return null;
+            }
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';
+
+            // 動態人數分配邏輯：第一組優先 3 人，第二組優先 4 人
+            const numGroups = 6;
+            let groupSizes = new Array(numGroups).fill(0);
+            
+            // 1. 優先給第 1 組 3 人
+            groupSizes[0] = Math.min(3, total);
+            let remaining = total - groupSizes[0];
+            
+            // 2. 接下來優先給第 2 組 4 人
+            if (remaining > 0) {
+                groupSizes[1] = Math.min(4, remaining);
+                remaining -= groupSizes[1];
+            }
+            
+            // 3. 剩下的學生平均分配給第 3 ~ 6 組
+            for (let i = 0; i < remaining; i++) {
+                // index 從 2 開始，代表第 3 組
+                groupSizes[2 + (i % 4)]++;
+            }
+            
+            groupSizes.forEach((size, index) => {
+                const groupCard = document.createElement('div');
+                groupCard.className = 'group-card';
+                
+                const title = document.createElement('div');
+                title.className = 'group-title';
+                title.innerText = `第 ${index + 1} 組`;
+                groupCard.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'seat-grid';
+
+                const patterns = [
+                    ['B', 'G', 'G', 'B'], 
+                    ['G', 'B', 'B', 'G']
+                ];
+                let currentPattern = patterns[Math.floor(Math.random() * 2)];
+
+                for (let i = 0; i < size; i++) {
+                    let prefer = (i < 4) ? currentPattern[i] : ((boys.length > girls.length) ? 'B' : 'G');
+                    let student = getStudent(prefer);
+                    
+                    if (student) {
+                        let seat = document.createElement('div');
+                        seat.className = `seat ${student.type}`;
+                        if (i >= 4) seat.classList.add('fifth'); // 第5人跨兩欄置中
+                        seat.innerText = student.name;
+                        grid.appendChild(seat);
+                    }
+                }
+
+                groupCard.appendChild(grid);
+                resultDiv.appendChild(groupCard);
+            });
+        }
+    </script>
+</body>
+</html>
